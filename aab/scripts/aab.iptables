@@ -1,0 +1,235 @@
+#!/system/bin/sh
+
+export PATH="/data/adb/magisk:/data/adb/ksu/bin:/data/adb/ap/bin:$PATH:/data/data/com.termux/files/usr/bin"
+
+scripts=$(realpath $0)
+scripts_dir=$(dirname ${scripts})
+
+source ${scripts_dir}/aab.config
+
+log() {
+	export TZ=Asia/Shanghai
+	now=$(date +"[%Y-%m-%d %H:%M:%S %Z]")
+	case $1 in
+	Info)
+		[ -t 1 ] && echo -e "\033[1;32m${now} [Info]: $2\033[0m" || echo "${now} [Info]: $2"
+		;;
+	Warn)
+		[ -t 1 ] && echo -e "\033[1;33m${now} [Warn]: $2\033[0m" || echo "${now} [Warn]: $2"
+		;;
+	Error)
+		[ -t 1 ] && echo -e "\033[1;31m${now} [Error]: $2\033[0m" || echo "${now} [Error]: $2"
+		;;
+	*)
+		[ -t 1 ] && echo -e "\033[1;30m${now} [$1]: $2\033[0m" || echo "${now} [$1]: $2"
+		;;
+	esac
+}
+
+uid_list=()
+find_packages_uid() {
+	for user_package in ${user_packages_list[@]}; do
+		user=$(echo ${user_package} | awk -F ':' '{print $1}')
+		package=$(echo ${user_package} | awk -F ':' '{print $2}')
+		uid="$(awk '{if($1=="'${package}'"){print $2}}' /data/system/packages.list)"
+		if [[ -n "${uid}" ]]; then
+			uid_list[${#uid_list[@]}]=$(expr ${user} \* "100000" + ${uid})
+		fi
+	done
+}
+
+probe_user_group() {
+	if bin_pid=$(busybox pidof ${bin_name}); then
+		aab_user=$(stat -c %U /proc/${bin_pid})
+		aab_group=$(stat -c %G /proc/${bin_pid})
+		return 0
+	else
+		aab_user=$(echo ${aab_user_group} | awk -F ':' '{print $1}')
+		aab_group=$(echo ${aab_user_group} | awk -F ':' '{print $2}')
+		return 1
+	fi
+}
+
+probe_adgh_user_group() {
+	if adgh_pid=$(busybox pidof adgh); then
+		aab_user=$(stat -c %U /proc/${adgh_pid})
+		aab_group=$(stat -c %G /proc/${adgh_pid})
+		return 0
+	else
+		aab_user=$(echo ${aab_user_group} | awk -F ':' '{print $1}')
+		aab_group=$(echo ${aab_user_group} | awk -F ':' '{print $2}')
+		return 1
+	fi
+}
+
+enable_iptables() {
+	${iptables} -t nat -N AAB_REDIRECT_DNS
+	${iptables} -t nat -F AAB_REDIRECT_DNS
+
+	${iptables} -t nat -A AAB_REDIRECT_DNS -m owner --uid-owner ${aab_user} --gid-owner ${aab_group} -j RETURN
+
+	find_packages_uid
+
+	if [ "${uid_list}" = "" ]; then
+		${iptables} -t nat -A AAB_REDIRECT_DNS -p udp --dport 53 -j REDIRECT --to-ports ${dns_redirect_port}
+		${iptables} -t nat -A AAB_REDIRECT_DNS -p tcp --dport 53 -j REDIRECT --to-ports ${dns_redirect_port}
+	else
+		for appid in ${uid_list[@]}; do
+			${iptables} -t nat -A AAB_REDIRECT_DNS -p udp -m owner --uid-owner ${appid} -j RETURN
+			${iptables} -t nat -A AAB_REDIRECT_DNS -p tcp -m owner --uid-owner ${appid} -j RETURN
+		done
+		${iptables} -t nat -A AAB_REDIRECT_DNS -p udp --dport 53 -j REDIRECT --to-ports ${dns_redirect_port}
+		${iptables} -t nat -A AAB_REDIRECT_DNS -p tcp --dport 53 -j REDIRECT --to-ports ${dns_redirect_port}
+	fi
+
+	if [ "${iptables}" = "iptables -w 100" ]; then
+		for subnet in ${intranet[@]}; do
+			${iptables} -t nat -A AAB_REDIRECT_DNS -d ${subnet} -j RETURN
+		done
+	fi
+
+	if [ "${iptables}" = "ip6tables -w 100" ]; then
+		for subnet6 in ${intranet6[@]}; do
+			${iptables} -t nat -A AAB_REDIRECT_DNS -d ${subnet6} -j RETURN
+		done
+	fi
+
+	${iptables} -t nat -I OUTPUT -j AAB_REDIRECT_DNS
+}
+
+disable_iptables() {
+	${iptables} -t nat -D OUTPUT -j AAB_REDIRECT_DNS
+	${iptables} -t nat -F AAB_REDIRECT_DNS
+	${iptables} -t nat -X AAB_REDIRECT_DNS
+}
+
+disable_ipv6() {
+	echo 0 >/proc/sys/net/ipv6/conf/all/accept_ra
+	echo 0 >/proc/sys/net/ipv6/conf/wlan0/accept_ra
+	echo 1 >/proc/sys/net/ipv6/conf/all/disable_ipv6
+	echo 1 >/proc/sys/net/ipv6/conf/default/disable_ipv6
+	echo 1 >/proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+
+	ip6tables -w 100 -t filter -N AAB_BLOCK_DNS
+	ip6tables -w 100 -t filter -F AAB_BLOCK_DNS
+
+	ip6tables -w 100 -t filter -A AAB_BLOCK_DNS -p udp --dport 53 -j DROP
+	ip6tables -w 100 -t filter -A AAB_BLOCK_DNS -p tcp --dport 53 -j DROP
+
+	ip6tables -w 100 -t filter -I OUTPUT -j AAB_BLOCK_DNS
+
+	ip -6 rule add unreachable pref 100
+	# ip -6 route flash table main
+}
+
+enable_ipv6() {
+	echo 1 >/proc/sys/net/ipv6/conf/all/accept_ra
+	echo 1 >/proc/sys/net/ipv6/conf/wlan0/accept_ra
+	echo 0 >/proc/sys/net/ipv6/conf/all/disable_ipv6
+	echo 0 >/proc/sys/net/ipv6/conf/default/disable_ipv6
+	echo 0 >/proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+
+	ip6tables -w 100 -t filter -F AAB_BLOCK_DNS
+	ip6tables -w 100 -t filter -D OUTPUT -j AAB_BLOCK_DNS
+	ip6tables -w 100 -t filter -X AAB_BLOCK_DNS
+
+	ip -6 rule del unreachable pref 100
+}
+
+case "$1" in
+enable)
+	iptables="iptables -w 100" && disable_iptables >>/dev/null 2>&1
+	iptables="ip6tables -w 100" && disable_iptables >>/dev/null 2>&1
+	sleep 1
+	if [ "${run_mode}" = "0" ]; then
+		if ! probe_user_group; then
+			log Error "failed to check aab user group, please make sure ${bin_name} core is started."
+			return 1
+		fi
+	elif [ "${run_mode}" = "1" ]; then
+		if ! probe_adgh_user_group; then
+			log Error "failed to check aab user group, please make sure adgh core is started."
+			return 1
+		fi
+	else
+		log Error "failed to check aab user group, please make sure any core is started."
+		return 2
+	fi
+	log Info "creating ip(6)tables transparent rules."
+	iptables="iptables -w 100"
+	enable_iptables && log Info "create iptables transparent rules done." || (log Error "create iptables transparent rules failed." && disable_iptables >>/dev/null 2>&1)
+	if [ "${ipv6}" = "enable" ]; then
+		log Debug "use IPv6."
+		enable_ipv6
+		if ip6tables -t nat -L >>/dev/null 2>&1; then
+			iptables="ip6tables -w 100"
+			enable_iptables && log Info "create ip6tables transparent rules done." || (log Error "create ip6tables transparent rules failed." && disable_iptables >>/dev/null 2>&1)
+		fi
+	else
+		disable_ipv6
+		log Warn "disable IPv6."
+	fi
+	;;
+disable)
+	log Warn "cleaning up ip(6)tables transparent rules."
+	if [ "${run_mode}" = "0" ]; then
+		probe_user_group
+	elif [ "${run_mode}" = "1" ]; then
+		probe_adgh_user_group
+	else
+		return 2
+	fi
+	iptables="iptables -w 100" && disable_iptables >>/dev/null 2>&1
+	iptables="ip6tables -w 100" && disable_iptables >>/dev/null 2>&1
+	log Warn "clean up ip(6)tables transparent rules done."
+	enable_ipv6
+	log Warn "enable IPv6."
+	return 0
+	;;
+renew)
+	log Warn "cleaning up ip(6)tables transparent rules."
+	iptables="iptables -w 100" && disable_iptables >>/dev/null 2>&1
+	iptables="ip6tables -w 100" && disable_iptables >>/dev/null 2>&1
+	log Warn "clean up ip(6)tables transparent rules done."
+	sleep 3
+	if [ "${run_mode}" = "0" ]; then
+		if ! probe_user_group; then
+			log Error "failed to check aab user group, please make sure ${bin_name} core is started."
+			return 1
+		fi
+	elif [ "${run_mode}" = "1" ]; then
+		if ! probe_adgh_user_group; then
+			log Error "failed to check aab user group, please make sure adgh core is started."
+			return 1
+		fi
+	else
+		log Error "failed to check aab user group, please make sure any core is started."
+		return 2
+	fi
+	log Info "creating ip(6)tables transparent rules."
+	iptables="iptables -w 100"
+	enable_iptables && log Info "create iptables transparent rules done." || (log Error "create iptables transparent rules failed." && disable_iptables >>/dev/null 2>&1)
+	if [ "${ipv6}" = "enable" ]; then
+		log Debug "use IPv6."
+		enable_ipv6
+		if ip6tables -t nat -L >>/dev/null 2>&1; then
+			iptables="ip6tables -w 100"
+			enable_iptables && log Info "create ip6tables transparent rules done." || (log Error "create ip6tables transparent rules failed." && disable_iptables >>/dev/null 2>&1)
+		fi
+	else
+		disable_ipv6
+		log Warn "disable IPv6."
+	fi
+	;;
+enable_ipv6)
+	enable_ipv6
+	log Warn "enable IPv6."
+	;;
+disable_ipv6)
+	disable_ipv6
+	log Warn "disable IPv6."
+	;;
+*)
+	log Error "$0 $1 usage: $0 {enable|disable|renew|enable_ipv6|disable_ipv6}"
+	;;
+esac
