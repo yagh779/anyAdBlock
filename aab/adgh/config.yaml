@@ -2,7 +2,7 @@ http:
   pprof:
     port: 6060
     enabled: false
-  address: 127.0.0.1:3000
+  address: 0.0.0.0:3000
   session_ttl: 720h
 users:
   - name: root
@@ -184,4 +184,4 @@ os:
   group: ""
   user: ""
   rlimit_nofile: 0
-schema_version: 31
+schema_version: 32
