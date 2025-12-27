@@ -3,9 +3,6 @@
 SKIPUNZIP=1
 ASH_STANDALONE=1
 
-DATADIR="/data/adb/aab"
-TIMESTAMP=$(date "+%Y%m%d%H%M")
-
 if [ "$BOOTMODE" ! = true ]; then
 	abort "Error: Please install in Magisk Manager, KernelSU Manager or APatch"
 fi
@@ -20,21 +17,22 @@ else
 	service_dir="/data/adb/service.d"
 fi
 
-if [ ! -d "$service_dir" ]; then
-	mkdir -p $service_dir
+if [ ! -d "${service_dir}" ]; then
+	mkdir -p ${service_dir}
 fi
 
 unzip -qo "${ZIPFILE}" -x 'META-INF/*' -d $MODPATH
 
-if [ -d ${DATADIR} ]; then
-	mkdir -p ${DATADIR}.old/${TIMESTAMP}/
-	mv ${DATADIR}/* ${DATADIR}.old/${TIMESTAMP}/
-	rm -rf ${DATADIR}
-	ui_print "- User configuration have been move to ${DATADIR}.old/${TIMESTAMP}"
-	ui_print "- please chage your configuration again befor reboot"
+if [ -d /data/adb/aab ]; then
+  cp /data/adb/aab/scripts/aab.config /data/adb/aab/scripts/aab.config.bak
+  cp -f $MODPATH/aab/scripts/* /data/adb/aab/scripts/
+	ui_print "- 用户配置文件已更改为 aab.config.bak"
+	ui_print "- 如有需要请在重启前自行更改配置"
+  rm -rf $MODPATH/aab
+else
+  mv $MODPATH/aab /data/adb/
 fi
 
-mv $MODPATH/aab /data/adb/
 mkdir -p /data/adb/aab/bin/
 mkdir -p /data/adb/aab/run/
 
