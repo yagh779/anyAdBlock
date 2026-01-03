@@ -24,13 +24,13 @@ fi
 unzip -qo "${ZIPFILE}" -x 'META-INF/*' -d $MODPATH
 
 if [ -d /data/adb/aab ]; then
-  cp /data/adb/aab/scripts/aab.config /data/adb/aab/scripts/aab.config.bak
-  cp -f $MODPATH/aab/scripts/* /data/adb/aab/scripts/
+	cp /data/adb/aab/scripts/aab.config /data/adb/aab/scripts/aab.config.bak
+	cp -f $MODPATH/aab/scripts/* /data/adb/aab/scripts/
 	ui_print "- 用户配置文件已更改为 aab.config.bak"
 	ui_print "- 如有需要请在重启前自行更改配置"
-  rm -rf $MODPATH/aab
+	rm -rf $MODPATH/aab
 else
-  mv $MODPATH/aab /data/adb/
+	mv $MODPATH/aab /data/adb/
 fi
 
 mkdir -p /data/adb/aab/bin/
