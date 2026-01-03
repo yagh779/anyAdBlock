@@ -76,7 +76,7 @@ check_cronmos() {
 		chown -R ${aab_user_group} ${aab_path}
 	fi
 	cron_pid=$(busybox ps -ef | grep 'crond' | grep -vE 'inotifyd|grep' | awk -F ' ' '{print $1}')
-	if ${cron_pid}; then
+	if ["${cron_pid}" != ""]; then
 		return 1
 	fi
 }
@@ -143,7 +143,7 @@ start_adgh() {
 
 stop_cronmos() {
 	cron_pid=$(busybox ps -ef | grep 'crond' | grep -vE 'inotifyd|grep' | awk -F ' ' '{print $1}')
-	if ${cron_pid}; then
+	if ["${cron_pid}" != ""]; then
 		log Warn "关闭 mosdns rule 自动更新"
 		kill ${cron_pid}
 	fi
