@@ -1,7 +1,7 @@
 id=anyAdBlock
 name=anyAdBlock
-version=v1.6
-versionCode=20251227
+version=v1.7
+versionCode=20260103
 author=yagh779
 description=Use adguardhome, mosdns block ads on Android devices.
 updateJson=https://raw.githubusercontent.com/yagh779/anyAdBlock/master/aab.json

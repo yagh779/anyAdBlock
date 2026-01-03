@@ -1,5 +1,8 @@
 ## anyAdBlock 更新日志
 
+### v1.7
+- Fixes and improvements
+
 ### v1.6
 - 添加在线更新
 - 更新 adgh 配置参数
