@@ -76,7 +76,7 @@ check_cronmos() {
 		chown -R ${aab_user_group} ${aab_path}
 	fi
 	cron_pid=$(busybox ps -ef | grep 'crond' | grep -vE 'inotifyd|grep' | awk -F ' ' '{print $1}')
-	if [ "${cron_pid}" != "" ]; then
+	if ["${cron_pid}" != ""]; then
 		return 1
 	fi
 }
@@ -87,6 +87,7 @@ start_bin() {
 	adgh)
 		if [ -f ${bin_path} ]; then
 			log Info "starting ${bin_name} service."
+			export TZ="Asia/Shanghai"
 			export SSL_CERT_DIR="/system/etc/security/cacerts/"
 			nohup busybox setuidgid ${aab_user_group} ${bin_path} -w ${aab_path}/${bin_name} -c ${aab_path}/${bin_name}/config.yaml -l ${aab_path}/${bin_name}/src/${bin_name}_$(date +%Y%m%d%H%M).log 2>${run_path}/error_${bin_name}.log &
 			echo -n $! >${pid_file}
@@ -131,6 +132,7 @@ start_adgh() {
 	ulimit -SHn 1000000
 	if [ -f ${adgh_path} ]; then
 		log Info "starting adgh service."
+		export TZ="Asia/Shanghai"
 		export SSL_CERT_DIR="/system/etc/security/cacerts/"
 		nohup busybox setuidgid ${aab_user_group} ${adgh_path} -w ${aab_path}/adgh -c ${aab_path}/adgh/adgh.yaml -l ${aab_path}/adgh/src/adgh_$(date +%Y%m%d%H%M).log 2>${run_path}/error_adgh.log &
 		echo -n $! >${adgh_pid_file}
@@ -143,7 +145,7 @@ start_adgh() {
 
 stop_cronmos() {
 	cron_pid=$(busybox ps -ef | grep 'crond' | grep -vE 'inotifyd|grep' | awk -F ' ' '{print $1}')
-	if [ "${cron_pid}" != "" ]; then
+	if ["${cron_pid}" != ""]; then
 		log Warn "关闭 mosdns rule 自动更新"
 		kill ${cron_pid}
 	fi
@@ -220,7 +222,7 @@ display_bin_status() {
 		log Info "${bin_name} has started with the $(stat -c %U:%G /proc/${bin_pid}) user group."
 		log Info "${bin_name} service is running. ( PID: ${bin_pid} )"
 		log Info "${bin_name} memory usage: $(cat /proc/${bin_pid}/status | grep -w VmRSS | awk '{print $2$3}')"
-		log Info "${bin_name} cpu usage: $((/system/bin/ps -eo %CPU,NAME | grep ${bin_name} | awk '{print $1"%"}') 2> /dev/null || dumpsys cpuinfo | grep ${bin_name} | awk '{print $1}')"
+		log Info "${bin_name} cpu usage: $(/system/bin/ps -eo %CPU,NAME 2>/dev/null | grep ${bin_name} | awk '{print $1"%"}' || dumpsys cpuinfo | grep ${bin_name} | awk '{print $1}')"
 		log Info "${bin_name} running time: $(busybox ps -o comm,etime | grep ${bin_name} | awk '{print $2}')"
 		echo -n ${bin_pid} >${pid_file}
 		return 0
@@ -235,7 +237,7 @@ display_mosdns_status() {
 		log Info "mosdns has started with the $(stat -c %U:%G /proc/${mosdns_pid}) user group."
 		log Info "mosdns service is running. ( PID: ${mosdns_pid} )"
 		log Info "mosdns memory usage: $(cat /proc/${mosdns_pid}/status | grep -w VmRSS | awk '{print $2$3}')"
-		log Info "mosdns cpu usage: $((/system/bin/ps -eo %CPU,NAME | grep mosdns | awk '{print $1"%"}') 2> /dev/null || dumpsys cpuinfo | grep mosdns | awk '{print $1}')"
+		log Info "mosdns cpu usage: $(/system/bin/ps -eo %CPU,NAME 2>/dev/null | grep mosdns | awk '{print $1"%"}') || dumpsys cpuinfo | grep mosdns | awk '{print $1}')"
 		log Info "mosdns running time: $(busybox ps -o comm,etime | grep mosdns | awk '{print $2}')"
 		echo -n ${mosdns_pid} >${mosdns_pid_file}
 		return 0
@@ -250,7 +252,7 @@ display_adgh_status() {
 		log Info "adgh has started with the $(stat -c %U:%G /proc/${adgh_pid}) user group."
 		log Info "adgh service is running. ( PID: ${adgh_pid} )"
 		log Info "adgh memory usage: $(cat /proc/${adgh_pid}/status | grep -w VmRSS | awk '{print $2$3}')"
-		log Info "adgh cpu usage: $((/system/bin/ps -eo %CPU,NAME | grep adgh | awk '{print $1"%"}') 2> /dev/null || dumpsys cpuinfo | grep adgh | awk '{print $1}')"
+		log Info "adgh cpu usage: $(/system/bin/ps -eo %CPU,NAME 2>/dev/null | grep adgh | awk '{print $1"%"}') 2> /dev/null || dumpsys cpuinfo | grep adgh | awk '{print $1}')"
 		log Info "adgh running time: $(busybox ps -o comm,etime | grep adgh | awk '{print $2}')"
 		echo -n ${adgh_pid} >${adgh_pid_file}
 		return 0
