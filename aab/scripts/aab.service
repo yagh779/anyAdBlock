@@ -1,6 +1,8 @@
 #!/system/bin/sh
 
 export PATH="/data/adb/magisk:/data/adb/ksu/bin:/data/adb/ap/bin:$PATH:/data/data/com.termux/files/usr/bin"
+export TZ="Asia/Shanghai"
+export SSL_CERT_DIR="/system/etc/security/cacerts/"
 
 scripts=$(realpath $0)
 scripts_dir=$(dirname ${scripts})
@@ -13,7 +15,6 @@ mkdir -p ${aab_path}/${bin_name}
 find ${aab_path} -mtime +3 -type f -name "*.log" | xargs rm -f
 
 log() {
-	export TZ=Asia/Shanghai
 	now=$(date +"[%Y-%m-%d %H:%M:%S %Z]")
 	case $1 in
 	Info)
@@ -87,8 +88,6 @@ start_bin() {
 	adgh)
 		if [ -f ${bin_path} ]; then
 			log Info "starting ${bin_name} service."
-			export TZ="Asia/Shanghai"
-			export SSL_CERT_DIR="/system/etc/security/cacerts/"
 			nohup busybox setuidgid ${aab_user_group} ${bin_path} -w ${aab_path}/${bin_name} -c ${aab_path}/${bin_name}/config.yaml -l ${aab_path}/${bin_name}/src/${bin_name}_$(date +%Y%m%d%H%M).log 2>${run_path}/error_${bin_name}.log &
 			echo -n $! >${pid_file}
 			return 0
@@ -132,8 +131,6 @@ start_adgh() {
 	ulimit -SHn 1000000
 	if [ -f ${adgh_path} ]; then
 		log Info "starting adgh service."
-		export TZ="Asia/Shanghai"
-		export SSL_CERT_DIR="/system/etc/security/cacerts/"
 		nohup busybox setuidgid ${aab_user_group} ${adgh_path} -w ${aab_path}/adgh -c ${aab_path}/adgh/adgh.yaml -l ${aab_path}/adgh/src/adgh_$(date +%Y%m%d%H%M).log 2>${run_path}/error_adgh.log &
 		echo -n $! >${adgh_pid_file}
 		return 0
