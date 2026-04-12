@@ -234,7 +234,7 @@ display_mosdns_status() {
 		log Info "mosdns has started with the $(stat -c %U:%G /proc/${mosdns_pid}) user group."
 		log Info "mosdns service is running. ( PID: ${mosdns_pid} )"
 		log Info "mosdns memory usage: $(cat /proc/${mosdns_pid}/status | grep -w VmRSS | awk '{print $2$3}')"
-		log Info "mosdns cpu usage: $(/system/bin/ps -eo %CPU,NAME 2>/dev/null | grep mosdns | awk '{print $1"%"}') || dumpsys cpuinfo | grep mosdns | awk '{print $1}')"
+		log Info "mosdns cpu usage: $(/system/bin/ps -eo %CPU,NAME 2>/dev/null | grep mosdns | awk '{print $1"%"}' || dumpsys cpuinfo | grep mosdns | awk '{print $1}')"
 		log Info "mosdns running time: $(busybox ps -o comm,etime | grep mosdns | awk '{print $2}')"
 		echo -n ${mosdns_pid} >${mosdns_pid_file}
 		return 0
@@ -249,7 +249,7 @@ display_adgh_status() {
 		log Info "adgh has started with the $(stat -c %U:%G /proc/${adgh_pid}) user group."
 		log Info "adgh service is running. ( PID: ${adgh_pid} )"
 		log Info "adgh memory usage: $(cat /proc/${adgh_pid}/status | grep -w VmRSS | awk '{print $2$3}')"
-		log Info "adgh cpu usage: $(/system/bin/ps -eo %CPU,NAME 2>/dev/null | grep adgh | awk '{print $1"%"}') 2> /dev/null || dumpsys cpuinfo | grep adgh | awk '{print $1}')"
+		log Info "adgh cpu usage: $(/system/bin/ps -eo %CPU,NAME 2>/dev/null | grep adgh | awk '{print $1"%"}' || dumpsys cpuinfo | grep adgh | awk '{print $1}')"
 		log Info "adgh running time: $(busybox ps -o comm,etime | grep adgh | awk '{print $2}')"
 		echo -n ${adgh_pid} >${adgh_pid_file}
 		return 0
