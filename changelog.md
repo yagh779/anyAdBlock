@@ -1,5 +1,8 @@
 ## anyAdBlock 更新日志
 
+### v1.8.2
+- Fixes and improvements
+
 ### v1.8.1
 - Fixes and improvements
 
