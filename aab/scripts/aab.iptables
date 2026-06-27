@@ -118,7 +118,7 @@ disable_ipv6() {
 
 	ip6tables -w 100 -t filter -I OUTPUT -j AAB_BLOCK_DNS
 
-	ip -6 rule add unreachable pref 100
+	# ip -6 rule add unreachable pref 100
 	# ip -6 route flash table main
 }
 
@@ -133,7 +133,7 @@ enable_ipv6() {
 	ip6tables -w 100 -t filter -D OUTPUT -j AAB_BLOCK_DNS
 	ip6tables -w 100 -t filter -X AAB_BLOCK_DNS
 
-	ip -6 rule del unreachable pref 100
+	# ip -6 rule del unreachable pref 100
 }
 
 case "$1" in
@@ -160,13 +160,13 @@ enable)
 	enable_iptables && log Info "create iptables transparent rules done." || (log Error "create iptables transparent rules failed." && disable_iptables >>/dev/null 2>&1)
 	if [ "${ipv6}" = "enable" ]; then
 		log Debug "use IPv6."
-		enable_ipv6
+		enable_ipv6 >>/dev/null 2>&1
 		if ip6tables -t nat -L >>/dev/null 2>&1; then
 			iptables="ip6tables -w 100"
 			enable_iptables && log Info "create ip6tables transparent rules done." || (log Error "create ip6tables transparent rules failed." && disable_iptables >>/dev/null 2>&1)
 		fi
 	else
-		disable_ipv6
+		disable_ipv6 >>/dev/null 2>&1
 		log Warn "disable IPv6."
 	fi
 	;;
@@ -182,7 +182,7 @@ disable)
 	iptables="iptables -w 100" && disable_iptables >>/dev/null 2>&1
 	iptables="ip6tables -w 100" && disable_iptables >>/dev/null 2>&1
 	log Warn "clean up ip(6)tables transparent rules done."
-	enable_ipv6
+	enable_ipv6 >>/dev/null 2>&1
 	log Warn "enable IPv6."
 	return 0
 	;;
@@ -211,22 +211,22 @@ renew)
 	enable_iptables && log Info "create iptables transparent rules done." || (log Error "create iptables transparent rules failed." && disable_iptables >>/dev/null 2>&1)
 	if [ "${ipv6}" = "enable" ]; then
 		log Debug "use IPv6."
-		enable_ipv6
+		enable_ipv6 >>/dev/null 2>&1
 		if ip6tables -t nat -L >>/dev/null 2>&1; then
 			iptables="ip6tables -w 100"
 			enable_iptables && log Info "create ip6tables transparent rules done." || (log Error "create ip6tables transparent rules failed." && disable_iptables >>/dev/null 2>&1)
 		fi
 	else
-		disable_ipv6
+		disable_ipv6 >>/dev/null 2>&1
 		log Warn "disable IPv6."
 	fi
 	;;
 enable_ipv6)
-	enable_ipv6
+	enable_ipv6 >>/dev/null 2>&1
 	log Warn "enable IPv6."
 	;;
 disable_ipv6)
-	disable_ipv6
+	disable_ipv6 >>/dev/null 2>&1
 	log Warn "disable IPv6."
 	;;
 *)

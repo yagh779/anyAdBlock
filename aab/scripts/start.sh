@@ -33,6 +33,6 @@ if [ ! -f ${module_dir}/disable ]; then
 	mv ${run_path}/run.log ${run_path}/run.log.bak
 	mv ${run_path}/run_error.log ${run_path}/run_error.log.bak
 
-	${scripts_dir}/aab.service start >>${run_path}/run.log 2>>${run_path}/run_error.log &&
-		[ "${compatible_mode}" = "0" ] && ${scripts_dir}/aab.iptables enable >>${run_path}/run.log 2>>${run_path}/run_error.log
+	${scripts_dir}/aab.service start >>${run_path}/run.log 2>>${run_path}/run_error.log
+	[ "${compatible_mode}" = "0" ] && ${scripts_dir}/aab.iptables enable >>${run_path}/run.log 2>>${run_path}/run_error.log
 fi
